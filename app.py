@@ -61,7 +61,7 @@ async def salvar(
     #tags: str = Form(...)
 ):
     db = SessionLocal()
-    novo = Incidente(codigo=codigo, descricao=descricao, causas=causas, solucao=solucao, tags=tags)
+    novo = Incidente(codigo=codigo, descricao=descricao, causas=causas, solucao=solucao) #tags=tags)
     db.add(novo)
     db.commit()
     return RedirectResponse(url="/", status_code=303)
