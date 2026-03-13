@@ -6,6 +6,26 @@
     <title>Livro de Erros | Base de Conhecimento</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        /* Resolve o problema da página pular para a direita quando o scroll some */
+        html { scrollbar-gutter: stable; }
+        body { overflow-y: scroll; }
+
+        .edit-area { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card-erro { transition: all 0.2s ease; }
+        .card-erro:hover { border-color: #10b981; }
+        
+        input, textarea {
+            background-color: #374151 !important;
+            color: white !important;
+        }
+    </style>
 </head>
 
 <body class="bg-[#0b0e14] text-gray-200">
@@ -25,60 +45,108 @@
                     <form action="/salvar" method="post" class="space-y-4">
                         <input type="text" name="codigo" placeholder="Código (ex: E067)" required
                             class="w-full bg-gray-800 p-2 rounded border border-gray-700 text-emerald-400 font-bold uppercase">
-
                         <textarea name="descricao" placeholder="Descrição: O que aconteceu?" required
                             class="w-full bg-gray-800 p-2 rounded border border-gray-700 h-20"></textarea>
-
-                        <textarea name="causas" placeholder="Possíveis Causas (O que pode estar gerando isso?)"
+                        <textarea name="causas" placeholder="Possíveis Causas"
                             class="w-full bg-gray-800 p-2 rounded border border-gray-700 h-20"></textarea>
-
-                        <textarea name="solucao" placeholder="Possíveis Soluções (Como resolvemos?)" required
+                        <textarea name="solucao" placeholder="Como resolvemos?" required
                             class="w-full bg-gray-800 p-2 rounded border border-gray-700 h-32"></textarea>
-
-                        <!--<input type="text" name="tags" placeholder="Tags: NFE, NFSe, etc"
-                            class="w-full bg-gray-800 p-2 rounded border border-gray-700">-->
-                        <button
-                            class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded transition">Salvar
-                            no Livro</button>
+                        <button class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded transition">
+                            Salvar no Livro
+                        </button>
                     </form>
+
+                    <div class="mt-8 pt-6 border-t border-gray-800 flex flex-col items-center space-y-3">
+                        <span class="text-xs text-gray-500 uppercase font-bold">Navegação</span>
+                        <div class="flex items-center space-x-2">
+                            {% if pagina > 1 %}
+                            <a href="/?pagina={{ pagina - 1 }}&busca={{ busca }}" 
+                               class="p-2 bg-gray-800 hover:bg-emerald-600 rounded-md transition-all text-sm shadow-md">⬅️</a>
+                            {% endif %}
+                            
+                            <span class="text-sm font-medium bg-gray-800 px-3 py-1 rounded border border-gray-700">
+                                {{ pagina }} / {{ total_paginas }}
+                            </span>
+
+                            {% if pagina < total_paginas %}
+                            <a href="/?pagina={{ pagina + 1 }}&busca={{ busca }}" 
+                               class="p-2 bg-gray-800 hover:bg-emerald-600 rounded-md transition-all text-sm shadow-md">➡️</a>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </aside>
 
             <main class="md:col-span-2 space-y-4">
                 {% for erro in erros %}
-                <div class="bg-gray-900 p-6 rounded-lg border border-gray-800 border-l-4 border-emerald-600 shadow-xl">
+                <div class="bg-gray-900 p-6 rounded-lg border border-gray-800 border-l-4 border-emerald-600 shadow-xl card-erro">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <span
-                                class="bg-emerald-900 text-emerald-300 px-3 py-1 rounded text-sm font-bold mr-2 uppercase">{{
-                                erro.codigo }}</span>
+                            <span class="bg-emerald-900 text-emerald-300 px-3 py-1 rounded text-sm font-bold mr-2 uppercase">{{ erro.codigo }}</span>
                             <h3 class="text-xl font-bold text-white inline italic">"{{ erro.descricao }}"</h3>
                         </div>
                         <span class="text-xs text-gray-600">{{ erro.data.strftime('%d/%m/%Y') }}</span>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-gray-800 p-3 rounded border border-red-900/30">
-                            <h4 class="text-xs font-bold text-red-400 uppercase mb-2">🚩 Causas Prováveis</h4>
-                            <div class="text-sm text-gray-300 solution-content">{{ erro.causas }}</div>
-                        </div>
-                        <div class="bg-gray-800 p-3 rounded border border-emerald-900/30">
-                            <h4 class="text-xs font-bold text-emerald-400 uppercase mb-2">💡 Soluções</h4>
-                            <div class="text-sm text-gray-300 solution-content">{{ erro.solucao }}</div>
-                        </div>
+                    <div class="bg-gray-800 p-3 rounded border border-red-900/30 edit-trigger-box mb-3">
+                        <h4 class="text-xs font-bold text-red-400 uppercase mb-2 flex items-center">
+                            🚩 Causas Prováveis
+                            <button class="btn-edit-lapis" onclick="ativarEdicao('{{ erro.id }}', 'causas')">✏️</button>
+                        </h4>
+                        <div id="causas-{{ erro.id }}" class="text-sm text-gray-300 solution-content">{{ erro.causas }}</div>
                     </div>
 
-                    <div class="mt-3 text-xs text-gray-500 uppercase">🏷️ Tags: {{ erro.tags }}</div>
+                    <div class="bg-gray-800 p-3 rounded border border-emerald-900/30 edit-trigger-box">
+                        <h4 class="text-xs font-bold text-emerald-400 uppercase mb-2 flex items-center">
+                            💡 Soluções
+                            <button class="btn-edit-lapis" onclick="ativarEdicao('{{ erro.id }}', 'solucao')">✏️</button>
+                        </h4>
+                        <div id="solucao-{{ erro.id }}" class="text-sm text-gray-300 solution-content">{{ erro.solucao }}</div>
+                    </div>
                 </div>
                 {% endfor %}
             </main>
         </div>
     </div>
+
+    <script src="/static/js/busca.js"></script>
+    <script src="/static/js/editor.js"></script>
     <script>
+        // Renderiza Markdown inicial
         document.querySelectorAll('.solution-content').forEach(el => {
             el.innerHTML = marked.parse(el.innerText);
         });
+
+        // LÓGICA DE ALERTAS
+        const urlParams = new URLSearchParams(window.location.search);
+
+        if (urlParams.get('erro') === 'duplicado') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Código Duplicado!',
+                text: 'Este código já consta na sua base de dados.',
+                background: '#1f2937',
+                color: '#fff',
+                confirmButtonColor: '#10b981', 
+                iconColor: '#ef4444'
+            });
+            window.history.replaceState({}, document.title, "/");
+        }
+
+        if (urlParams.get('sucesso') === 'true') {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+            Toast.fire({
+                icon: 'success',
+                title: 'Salvo com sucesso!'
+            });
+            window.history.replaceState({}, document.title, "/");
+        }
     </script>
 </body>
-
 </html>
